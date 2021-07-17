@@ -1,0 +1,6 @@
+{
+    "path": "fs",
+    "routes": [
+        "readdir"
+    ]
+}
