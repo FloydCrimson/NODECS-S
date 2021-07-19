@@ -2,9 +2,7 @@
     "path": "path",
     "routes": [
         "delimiter",
-        "posix",
         "sep",
-        "win32",
         "basename",
         "dirname",
         "extname",

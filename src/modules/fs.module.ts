@@ -2,62 +2,124 @@ import * as _fs_ from 'fs';
 
 export class FSModule {
 
-    // PROPERTIES
-
-    // FUNCTIONS
-
-    public async access(path: _fs_.PathLike, mode: number | undefined) {
-        return new Promise<[NodeJS.ErrnoException]>((resolve) => _fs_.access(path, mode, (err: NodeJS.ErrnoException) => resolve([err])));
-    }
-
-    public async appendFile(file: _fs_.PathOrFileDescriptor, data: string | Uint8Array, options: _fs_.WriteFileOptions) {
-        return new Promise<[NodeJS.ErrnoException]>((resolve) => _fs_.appendFile(file, data, options, (err: NodeJS.ErrnoException) => resolve([err])));
-    }
-
-    public async chmod(path: _fs_.PathLike, mode: _fs_.Mode) {
-        return new Promise<[NodeJS.ErrnoException]>((resolve) => _fs_.chmod(path, mode, (err: NodeJS.ErrnoException) => resolve([err])));
-    }
-
-    public async chown(path: _fs_.PathLike, uid: number, gid: number) {
-        return new Promise<[NodeJS.ErrnoException]>((resolve) => _fs_.chown(path, uid, gid, (err: NodeJS.ErrnoException) => resolve([err])));
-    }
-
-    // ...
-
-    public async lstat(path: _fs_.PathLike, options: _fs_.StatOptions | undefined) {
-        return new Promise<[NodeJS.ErrnoException | null, Transformer<_fs_.Stats | _fs_.BigIntStats>]>((resolve) => _fs_.lstat(path, options, async (err: NodeJS.ErrnoException | null, stats: _fs_.Stats | _fs_.BigIntStats) => resolve([err, await FSModule.StatsTransformer(stats)])));
-    }
-
-    public async readdir(path: _fs_.PathLike, options: { encoding: BufferEncoding | null; } | BufferEncoding | undefined | null) {
-        return new Promise<[NodeJS.ErrnoException | null, string[]]>((resolve) => _fs_.readdir(path, options, (err: NodeJS.ErrnoException | null, files: string[]) => resolve([err, files])));
-    }
-
-    // HELP
-
-    private static async StatsTransformer(stats: _fs_.Stats | _fs_.BigIntStats) {
-        return FSModule.Cleaner<_fs_.Stats | _fs_.BigIntStats>(stats, ['_checkModeProperty']);
-    }
-
-    private static async Cleaner<T, K extends keyof T = never>(input: T, keys: (keyof any)[] = []): Promise<Transformer<T, K>> {
-        const output = new Object() as unknown;
-        for (const key in input) {
-            if (!keys.includes(key)) {
-                if (typeof input[key] === 'function') {
-                    try {
-                        const result = (input[key] as unknown as <I = any>() => Promise<I> | I)();
-                        const isPromise = typeof result === 'object' && result[key]['then'] === 'function';
-                        output[key] = (isPromise ? await (result as Promise<[any, any]>).then((r) => [r, null]).catch((e) => [null, e]) : [result, null]) as unknown as any;
-                    } catch (error) {
-                        output[key] = [null, error] as unknown as any;
-                    }
+    public async lstat(path: string, options?: { bigint?: false; throwIfNoEntry?: boolean; }): Promise<Stats>;
+    public async lstat(path: string, options: { bigint: true; throwIfNoEntry?: boolean; }): Promise<BigIntStats>;
+    public async lstat(path: string, options?: any) {
+        return new Promise<Stats | BigIntStats>((resolve, reject) => {
+            _fs_.lstat(path, options, (err: NodeJS.ErrnoException | null, stats: _fs_.Stats | _fs_.BigIntStats) => {
+                if (err) {
+                    reject(err);
                 } else {
-                    output[key] = input[key];
+                    resolve(this.mapStatsBase(stats));
                 }
-            }
-        }
-        return output as Transformer<T, K>;
+            });
+        });
+    }
+
+    public async readdir(path: string, options?: { encoding?: BufferEncoding; withFileTypes?: false; } | BufferEncoding): Promise<string[]>;
+    public async readdir(path: string, options: { encoding?: BufferEncoding; withFileTypes: true; } | BufferEncoding): Promise<Dirent[]>;
+    public async readdir(path: string, options?: any) {
+        return new Promise<string[] | Dirent[]>((resolve, reject) => {
+            _fs_.readdir(path, options, (err: NodeJS.ErrnoException | null, files: string[] | _fs_.Dirent[]) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(options?.withFileTypes ? this.mapDirent(files as _fs_.Dirent[]) : (files as string[]));
+                }
+            });
+        });
+    }
+
+    //
+
+    private mapStatsBase(stats: _fs_.Stats | _fs_.BigIntStats): Stats | BigIntStats {
+        return {
+            isFile: stats.isFile(),
+            isDirectory: stats.isDirectory(),
+            isBlockDevice: stats.isBlockDevice(),
+            isCharacterDevice: stats.isCharacterDevice(),
+            isSymbolicLink: stats.isSymbolicLink(),
+            isFIFO: stats.isFIFO(),
+            isSocket: stats.isSocket(),
+            dev: stats.dev,
+            ino: stats.ino,
+            mode: stats.mode,
+            nlink: stats.nlink,
+            uid: stats.uid,
+            gid: stats.gid,
+            rdev: stats.rdev,
+            size: stats.size,
+            blksize: stats.blksize,
+            blocks: stats.blocks,
+            atimeMs: stats.atimeMs,
+            mtimeMs: stats.mtimeMs,
+            ctimeMs: stats.ctimeMs,
+            birthtimeMs: stats.birthtimeMs,
+            atime: stats.atime,
+            mtime: stats.mtime,
+            ctime: stats.ctime,
+            birthtime: stats.birthtime
+        } as Stats | BigIntStats;
+    }
+
+    private mapDirent(files: _fs_.Dirent[]): Dirent[] {
+        return files.map((file) => {
+            return {
+                isFile: file.isFile(),
+                isDirectory: file.isDirectory(),
+                isBlockDevice: file.isBlockDevice(),
+                isCharacterDevice: file.isCharacterDevice(),
+                isSymbolicLink: file.isSymbolicLink(),
+                isFIFO: file.isFIFO(),
+                isSocket: file.isSocket(),
+                name: file.name
+            };
+        });
     }
 
 }
 
-type Transformer<T, K extends keyof T = never> = { [KT in Exclude<keyof T, K>]: T[KT] extends () => Promise<infer I> | infer I ? [I, any] : never };
+type BufferEncoding = 'ascii' | 'utf8' | 'utf-8' | 'utf16le' | 'ucs2' | 'ucs-2' | 'base64' | 'base64url' | 'latin1' | 'binary' | 'hex';
+
+interface Stats extends StatsBase<number> { }
+
+interface BigIntStats extends StatsBase<bigint> { }
+
+interface StatsBase<T> {
+    isFile: boolean;
+    isDirectory: boolean;
+    isBlockDevice: boolean;
+    isCharacterDevice: boolean;
+    isSymbolicLink: boolean;
+    isFIFO: boolean;
+    isSocket: boolean;
+    dev: T;
+    ino: T;
+    mode: T;
+    nlink: T;
+    uid: T;
+    gid: T;
+    rdev: T;
+    size: T;
+    blksize: T;
+    blocks: T;
+    atimeMs: T;
+    mtimeMs: T;
+    ctimeMs: T;
+    birthtimeMs: T;
+    atime: Date;
+    mtime: Date;
+    ctime: Date;
+    birthtime: Date;
+}
+
+interface Dirent {
+    isFile: boolean;
+    isDirectory: boolean;
+    isBlockDevice: boolean;
+    isCharacterDevice: boolean;
+    isSymbolicLink: boolean;
+    isFIFO: boolean;
+    isSocket: boolean;
+    name: string;
+}
