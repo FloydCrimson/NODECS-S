@@ -24,7 +24,19 @@ export class FSModule {
                 if (err) {
                     reject(err);
                 } else {
-                    resolve(options?.withFileTypes ? this.mapDirent(files as _fs_.Dirent[]) : (files as string[]));
+                    resolve(options?.withFileTypes ? (files as _fs_.Dirent[]).map((file) => this.mapDirent(file)) : (files as string[]));
+                }
+            });
+        });
+    }
+
+    public async readFile(path: string, options: { encoding: BufferEncoding; flag?: string; } | string) {
+        return new Promise<string>((resolve, reject) => {
+            _fs_.readFile(path, options, (err: NodeJS.ErrnoException | null, data: string) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(data);
                 }
             });
         });
@@ -62,19 +74,17 @@ export class FSModule {
         } as Stats | BigIntStats;
     }
 
-    private mapDirent(files: _fs_.Dirent[]): Dirent[] {
-        return files.map((file) => {
-            return {
-                isFile: file.isFile(),
-                isDirectory: file.isDirectory(),
-                isBlockDevice: file.isBlockDevice(),
-                isCharacterDevice: file.isCharacterDevice(),
-                isSymbolicLink: file.isSymbolicLink(),
-                isFIFO: file.isFIFO(),
-                isSocket: file.isSocket(),
-                name: file.name
-            };
-        });
+    private mapDirent(file: _fs_.Dirent): Dirent {
+        return {
+            isFile: file.isFile(),
+            isDirectory: file.isDirectory(),
+            isBlockDevice: file.isBlockDevice(),
+            isCharacterDevice: file.isCharacterDevice(),
+            isSymbolicLink: file.isSymbolicLink(),
+            isFIFO: file.isFIFO(),
+            isSocket: file.isSocket(),
+            name: file.name
+        } as Dirent;
     }
 
 }
