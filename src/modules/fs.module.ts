@@ -2,6 +2,18 @@ import * as _fs_ from 'fs';
 
 export class FSModule {
 
+    public async access(path: string, mode?: keyof typeof _fs_.constants) {
+        return new Promise<void>((resolve, reject) => {
+            _fs_.access(path, mode ? _fs_.constants[mode] : undefined, (err: NodeJS.ErrnoException) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
+                }
+            });
+        });
+    }
+
     public async lstat(path: string, options?: { bigint?: false; throwIfNoEntry?: boolean; }): Promise<Stats>;
     public async lstat(path: string, options: { bigint: true; throwIfNoEntry?: boolean; }): Promise<BigIntStats>;
     public async lstat(path: string, options?: any) {
@@ -37,6 +49,18 @@ export class FSModule {
                     reject(err);
                 } else {
                     resolve(data);
+                }
+            });
+        });
+    }
+
+    public async writeFile(path: string, data: string, options: WriteFileOptions) {
+        return new Promise<void>((resolve, reject) => {
+            _fs_.writeFile(path, data, options, (err: NodeJS.ErrnoException | null) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve();
                 }
             });
         });
@@ -90,6 +114,14 @@ export class FSModule {
 }
 
 type BufferEncoding = 'ascii' | 'utf8' | 'utf-8' | 'utf16le' | 'ucs2' | 'ucs-2' | 'base64' | 'base64url' | 'latin1' | 'binary' | 'hex';
+
+type Mode = number | string;
+
+type WriteFileOptions = (ObjectEncodingOptions & { mode?: Mode | undefined; flag?: string | undefined; }) | string | null;
+
+interface ObjectEncodingOptions {
+    encoding?: BufferEncoding | null | undefined;
+}
 
 interface Stats extends StatsBase<number> { }
 

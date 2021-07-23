@@ -18,11 +18,12 @@ for (const [config, module] of map.entries()) {
             module[route](...args).then((response) => {
                 res.setHeader('Access-Control-Allow-Origin', '*');
                 res.status(200);
-                response ? res.send({ args: JSON.stringify(response) }) : res.send();
+                (response !== null && response !== undefined) ? res.send({ args: JSON.stringify(response) }) : res.send();
                 console.log(`/${path}/${route}`, args, response);
             }).catch((error) => {
                 res.setHeader('Access-Control-Allow-Origin', '*');
                 res.status(500);
+                (error !== null && error !== undefined) ? res.send(error) : res.send();
                 console.error(`/${path}/${route}`, args, error);
             });
         });

@@ -1,8 +1,10 @@
 {
     "path": "fs",
     "routes": [
+        "access",
         "lstat",
         "readdir",
-        "readFile"
+        "readFile",
+        "writeFile"
     ]
 }
