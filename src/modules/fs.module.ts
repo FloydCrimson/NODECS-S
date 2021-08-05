@@ -4,7 +4,7 @@ export class FSModule {
 
     public async access(path: string, mode?: keyof typeof _fs_.constants) {
         return new Promise<void>((resolve, reject) => {
-            _fs_.access(path, mode ? _fs_.constants[mode] : undefined, (err: NodeJS.ErrnoException) => {
+            _fs_.access(path, mode ? _fs_.constants[mode] : undefined, (err: NodeJS.ErrnoException | null) => {
                 if (err) {
                     reject(err);
                 } else {
@@ -23,6 +23,18 @@ export class FSModule {
                     reject(err);
                 } else {
                     resolve(this.mapStatsBase(stats));
+                }
+            });
+        });
+    }
+
+    public async mkdir(path: string, options?: MakeDirectoryOptions) {
+        return new Promise<string>((resolve, reject) => {
+            _fs_.mkdir(path, options, (err: NodeJS.ErrnoException | null, path?: string) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(path);
                 }
             });
         });
@@ -118,6 +130,11 @@ type BufferEncoding = 'ascii' | 'utf8' | 'utf-8' | 'utf16le' | 'ucs2' | 'ucs-2' 
 type Mode = number | string;
 
 type WriteFileOptions = (ObjectEncodingOptions & { mode?: Mode | undefined; flag?: string | undefined; }) | string | null;
+
+interface MakeDirectoryOptions {
+    recursive?: boolean | undefined;
+    mode?: Mode | undefined;
+}
 
 interface ObjectEncodingOptions {
     encoding?: BufferEncoding | null | undefined;

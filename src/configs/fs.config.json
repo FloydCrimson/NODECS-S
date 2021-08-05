@@ -3,6 +3,7 @@
     "routes": [
         "access",
         "lstat",
+        "mkdir",
         "readdir",
         "readFile",
         "writeFile"
